@@ -1,0 +1,22 @@
+FROM php:8.3-cli
+
+# Install extensions
+RUN apt-get update && apt-get install -y \
+    libzip-dev libxml2-dev libcurl4-openssl-dev libonig-dev \
+    && docker-php-ext-install pdo pdo_mysql mbstring zip xml curl
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+COPY . .
+
+RUN composer install --no-dev --optimize-autoloader
+RUN php artisan config:cache || true
+RUN php artisan route:cache || true
+
+RUN chmod -R 775 storage bootstrap/cache
+
+EXPOSE 8000
+
+CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000
